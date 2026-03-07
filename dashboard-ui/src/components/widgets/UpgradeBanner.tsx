@@ -18,7 +18,7 @@ import appConfig from '@/app-config';
 import { useUpgradeNotification } from '@/lib/upgrade-notifications';
 
 export default function UpgradeBanner() {
-  const { showBanner, cliStatus, clusterStatus, dismiss, dontRemindMe } = useUpgradeNotification(null);
+  const { showBanner, cliStatus, clusterStatus, dismiss, dontRemindMe } = useUpgradeNotification();
 
   if (!showBanner) return null;
 

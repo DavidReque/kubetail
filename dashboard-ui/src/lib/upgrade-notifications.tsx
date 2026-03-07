@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { useQuery } from '@apollo/client/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import appConfig from '@/app-config';
 import { CLI_VERSION_STATUS, CLUSTER_VERSION_STATUS } from '@/lib/graphql/dashboard/ops';
@@ -121,7 +121,17 @@ export interface UpgradeNotificationState {
   dontRemindMe: () => void;
 }
 
-export function useUpgradeNotification(kubeContext: string | null): UpgradeNotificationState {
+const defaultState: UpgradeNotificationState = {
+  showBanner: false,
+  cliStatus: null,
+  clusterStatus: null,
+  dismiss: () => {},
+  dontRemindMe: () => {},
+};
+
+const UpgradeNotificationContext = createContext<UpgradeNotificationState>(defaultState);
+
+export function UpgradeNotificationProvider({ children }: React.PropsWithChildren) {
   const isDesktop = appConfig.environment === 'desktop';
   const [ready, setReady] = useState(false);
   const [dismissed, setDismissedState] = useState(() => isDismissed());
@@ -130,7 +140,6 @@ export function useUpgradeNotification(kubeContext: string | null): UpgradeNotif
   const cacheFresh = useMemo(() => isCacheFresh(), []);
   const cachedData = useMemo(() => getCachedData(), []);
 
-  // Delay showing the banner by SHOW_DELAY_MS after mount
   useEffect(() => {
     const timer = setTimeout(() => setReady(true), SHOW_DELAY_MS);
     return () => clearTimeout(timer);
@@ -143,7 +152,7 @@ export function useUpgradeNotification(kubeContext: string | null): UpgradeNotif
 
   const { data: clusterData } = useQuery(CLUSTER_VERSION_STATUS, {
     skip: cacheFresh,
-    variables: kubeContext ? { kubeContext } : {},
+    variables: {},
     fetchPolicy: 'network-only',
   });
 
@@ -184,5 +193,14 @@ export function useUpgradeNotification(kubeContext: string | null): UpgradeNotif
     setDismissedState(true);
   }, [cliStatus, clusterStatus]);
 
-  return { showBanner, cliStatus, clusterStatus, dismiss, dontRemindMe };
+  const value = useMemo(
+    () => ({ showBanner, cliStatus, clusterStatus, dismiss, dontRemindMe }),
+    [showBanner, cliStatus, clusterStatus, dismiss, dontRemindMe],
+  );
+
+  return <UpgradeNotificationContext.Provider value={value}>{children}</UpgradeNotificationContext.Provider>;
+}
+
+export function useUpgradeNotification(): UpgradeNotificationState {
+  return useContext(UpgradeNotificationContext);
 }

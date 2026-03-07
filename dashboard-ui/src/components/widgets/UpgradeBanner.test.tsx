@@ -16,9 +16,16 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 
 import appConfig from '@/app-config';
 import { CLI_VERSION_STATUS, CLUSTER_VERSION_STATUS } from '@/lib/graphql/dashboard/ops';
+import { UpgradeNotificationProvider } from '@/lib/upgrade-notifications';
 import { renderElement } from '@/test-utils';
 
-import UpgradeBanner from '../UpgradeBanner';
+import UpgradeBanner from './UpgradeBanner';
+
+const WrappedBanner = () => (
+  <UpgradeNotificationProvider>
+    <UpgradeBanner />
+  </UpgradeNotificationProvider>
+);
 
 const CACHE_KEY = 'kubetail:versionCheck:cache';
 const DISMISSED_KEY = 'kubetail:versionCheck:dismissed';
@@ -96,13 +103,13 @@ afterEach(() => {
 
 describe('UpgradeBanner', () => {
   it('does not show banner immediately (respects delay)', () => {
-    renderElement(<UpgradeBanner />, [cliMock, clusterMock]);
+    renderElement(<WrappedBanner />, [cliMock, clusterMock]);
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('shows banner when update is available after delay', async () => {
-    renderElement(<UpgradeBanner />, [cliMock, clusterMock]);
+    renderElement(<WrappedBanner />, [cliMock, clusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -117,7 +124,7 @@ describe('UpgradeBanner', () => {
   it('does not show banner if dismissed less than 24h ago', async () => {
     localStorage.setItem(DISMISSED_KEY, String(Date.now()));
 
-    renderElement(<UpgradeBanner />, [cliMock, clusterMock]);
+    renderElement(<WrappedBanner />, [cliMock, clusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -131,7 +138,7 @@ describe('UpgradeBanner', () => {
   it('does not show banner if version is in ignored list', async () => {
     localStorage.setItem(IGNORED_VERSIONS_KEY, JSON.stringify(['1.0.0', '0.9.0']));
 
-    renderElement(<UpgradeBanner />, [cliMock, clusterMock]);
+    renderElement(<WrappedBanner />, [cliMock, clusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -143,7 +150,7 @@ describe('UpgradeBanner', () => {
   });
 
   it('does not show banner when query returns null (fail silently)', async () => {
-    renderElement(<UpgradeBanner />, [nullCliMock, nullClusterMock]);
+    renderElement(<WrappedBanner />, [nullCliMock, nullClusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -155,7 +162,7 @@ describe('UpgradeBanner', () => {
   });
 
   it('does not show banner when no update available', async () => {
-    renderElement(<UpgradeBanner />, [nullCliMock, noUpdateClusterMock]);
+    renderElement(<WrappedBanner />, [nullCliMock, noUpdateClusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -174,7 +181,7 @@ describe('UpgradeBanner', () => {
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cachedData));
 
-    renderElement(<UpgradeBanner />, []);
+    renderElement(<WrappedBanner />, []);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -207,7 +214,7 @@ describe('UpgradeBanner', () => {
       },
     };
 
-    renderElement(<UpgradeBanner />, [noUpdateCliMock, nullClusterMock]);
+    renderElement(<WrappedBanner />, [noUpdateCliMock, nullClusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -219,7 +226,7 @@ describe('UpgradeBanner', () => {
   });
 
   it('dismiss button hides banner for 24 hours', async () => {
-    renderElement(<UpgradeBanner />, [cliMock, clusterMock]);
+    renderElement(<WrappedBanner />, [cliMock, clusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -238,7 +245,7 @@ describe('UpgradeBanner', () => {
   });
 
   it('"Don\'t remind me" button hides banner and saves version', async () => {
-    renderElement(<UpgradeBanner />, [cliMock, clusterMock]);
+    renderElement(<WrappedBanner />, [cliMock, clusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
@@ -260,7 +267,7 @@ describe('UpgradeBanner', () => {
   it('shows only cluster update in cluster mode', async () => {
     Object.defineProperty(appConfig, 'environment', { value: 'cluster', writable: true });
 
-    renderElement(<UpgradeBanner />, [clusterMock]);
+    renderElement(<WrappedBanner />, [clusterMock]);
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
