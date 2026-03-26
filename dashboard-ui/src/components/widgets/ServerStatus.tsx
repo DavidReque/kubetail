@@ -29,6 +29,7 @@ import {
   useKubernetesAPIServerStatus,
   useClusterAPIServerStatus,
 } from '@/lib/server-status';
+import { useClusterUpgradeNotification } from '@/lib/upgrade-notifications';
 import { cn } from '@/lib/util';
 
 const kubernetesAPIServerStatusMapState = atom(new Map<string, ServerStatus>());
@@ -193,6 +194,34 @@ const ClusterAPIServerStatusRow = ({ kubeContext, dashboardServerStatus }: Serve
   );
 };
 
+const ClusterVersionStatusRow = ({ kubeContext }: { kubeContext: string }) => {
+  const { upgradeAvailable, currentVersion, latestVersion } = useClusterUpgradeNotification(kubeContext);
+
+  let statusDot: Status;
+  let message: string;
+
+  if (currentVersion === null || latestVersion === null) {
+    statusDot = Status.Unknown;
+    message = 'Checking...';
+  } else if (upgradeAvailable) {
+    statusDot = Status.Pending;
+    message = `${currentVersion} → ${latestVersion} available`;
+  } else {
+    statusDot = Status.Healthy;
+    message = `Up to date (${currentVersion})`;
+  }
+
+  return (
+    <TableRow>
+      <TableCell className="w-px">Kubetail Version</TableCell>
+      <TableCell className="w-px">
+        <HealthDot status={statusDot} />
+      </TableCell>
+      <TableCell className="whitespace-normal">{message}</TableCell>
+    </TableRow>
+  );
+};
+
 const StatusTable = ({ children }: React.PropsWithChildren) => (
   <div className="rounded-md border shadow-xs">
     <Table>
@@ -253,6 +282,7 @@ const ServerStatusWidget = ({ className, healthDotClassName }: ServerStatusWidge
               <StatusTable>
                 <KubernetesAPIServerStatusRow kubeContext={kubeContext} dashboardServerStatus={dashboardServerStatus} />
                 <ClusterAPIServerStatusRow kubeContext={kubeContext} dashboardServerStatus={dashboardServerStatus} />
+                {appConfig.environment === 'desktop' && <ClusterVersionStatusRow kubeContext={kubeContext} />}
               </StatusTable>
             </Fragment>
           ))}
